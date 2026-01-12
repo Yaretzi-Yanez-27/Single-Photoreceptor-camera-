@@ -1,0 +1,64 @@
+from PIL import Image
+import math
+
+def text_to_image_auto_dim_minmax(input_file, output_file):
+    """
+    This program reads the text file that the arduino outputs,
+    normalizes the values on a 0-255 grayscale
+    """
+    
+    with open(input_file, 'r') as f:
+        values = [float(line.strip()) for line in f if line.strip()]
+    
+    # Normalize values to 0-255 range using min-max scaling
+    if values:  # Make sure we have values
+        min_val = min(values)
+        max_val = max(values)
+        range_val = max_val - min_val
+        
+        if range_val > 0:  # Avoid division by zero
+            # Apply min-max scaling: (value - min) / (max - min) * 255
+            normalized_values = [math.floor(((v - min_val) / range_val) * 255) for v in values]
+        else:
+            normalized_values = [128] * len(values)  # Mid-gray if all values are the same
+    else:
+        normalized_values = []
+    
+    # Try to find suitable dimensions (closest to square)
+    total_pixels = len(normalized_values)
+    
+    # For 324 values (18×18), it will use that
+    # For other counts, it finds the nearest square dimensions
+    height = int(math.sqrt(total_pixels))
+    width = total_pixels // height
+    
+    # Ensure width × height equals total pixels (or adjust)
+    while width * height < total_pixels and width > 0:
+        width -= 1
+    
+    # Reshape the normalized values
+    img_array = []
+    for i in range(height):
+        row = normalized_values[i*width:(i+1)*width]
+        img_array.append(row)
+    
+    # Create image
+    img = Image.new('L', (width, height))
+    for y in range(height):
+        for x in range(width):
+            if y*width + x < len(normalized_values):
+                img.putpixel((x, y), int(normalized_values[y*width + x]))
+    
+    # Save as uncompressed BMP
+    img.save(output_file, format='BMP')
+    
+    # Print some statistics
+    print(f"BMP image saved: {output_file}")
+    print(f"Dimensions: {width}×{height}")
+    print(f"Format: BMP (uncompressed)")
+    print(f"Original value range: [{min_val:.2f}, {max_val:.2f}]")
+    print(f"Normalized value range: [{min(normalized_values)}, {max(normalized_values)}]")
+    return img
+
+# Usage
+image = text_to_image_auto_dim_minmax("grayscale_values.txt", "output_minmax.bmp")
