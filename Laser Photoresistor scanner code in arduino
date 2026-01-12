@@ -1,0 +1,62 @@
+#include <Servo.h>
+
+int AT = 10; // angle step
+int RT = 1000; // read step
+
+int pos0 = 60;    // Horizontal servo position
+int pos1 = 60;    // Vertical servo position
+Servo servo_9;    // Horizontal servo
+Servo servo_10;   // Vertical servo
+
+void setup() {
+  Serial.begin(9600);
+  pinMode(A2, INPUT);  // Set A2 as photo resistor input
+  servo_9.attach(9, 500, 2500);
+  servo_10.attach(10, 500, 2500);
+  
+  // Initialize servos to starting position
+  servo_9.write(pos0);
+  servo_10.write(pos1);
+  delay(500);  // Give servos time to reach position
+}
+
+void loop() {
+  int button = digitalRead(A2);
+  
+  if (button == HIGH) {
+    if (pos1 < 120) {  // Check if done
+      // Write current positions to servos
+      servo_9.write(pos0);
+      servo_10.write(pos1);
+      
+      // Read sensor
+      int PhoSensor = analogRead(A1);
+      Serial.println(PhoSensor);
+      
+      delay(RT);  // Wait RT between movements
+      
+      // Move horizontal servo
+      pos0 += AT;
+      
+      // Check if we've reached the end of the current line
+      if (pos0 > 120) {
+        delay(1000);
+        pos0 = 60;  // Reset horizontal servo to start position
+
+        // Move vertical servo down one step
+        pos1 += AT;
+
+        // Check if we've completed all lines
+        if (pos1 >= 120) {
+          pos1 = 120;
+        }
+      }
+    } else {
+      Serial.println("finished");
+      delay(10000);
+    }
+  } else {
+    // Button not pressed - don't move servos
+    delay(100);
+  }
+}
